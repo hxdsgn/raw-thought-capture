@@ -265,16 +265,39 @@ textarea {
     color: var(--text-muted);
     padding: 0 4px;
     flex-shrink: 0;
+    gap: 10px;
+    /* Force space between URL and switch */
+    width: 100%;
+    /* Ensure it fits the parent */
+    box-sizing: border-box;
+}
+
+.source-left {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    /* CRITICAL: Allows inner text to truncate */
+    flex: 1;
+    /* Takes all available space left by the switch */
+    min-width: 0;
+    /* CRITICAL: Allows flex item to shrink below content size */
+}
+
+.source-label {
+    flex-shrink: 0;
+    /* Never squash the "Source:" text */
+    margin-right: 6px;
 }
 
 .source-url {
     color: var(--primary);
-    margin-left: 6px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 280px;
+    /* Adds the "..." */
+    display: block;
+    /* Ensures ellipsis works */
 }
 
 /* --- SWITCH --- */
@@ -284,6 +307,7 @@ textarea {
     width: 32px;
     height: 18px;
     flex-shrink: 0;
+    /* Prevent switch from getting squashed */
 }
 
 .switch input {
