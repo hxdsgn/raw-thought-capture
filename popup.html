@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+
+  <div id="view-capture" class="app-container">
+    <div class="header">
+      <div class="header-left">
+        <span class="status-indicator" id="status-dot"></span>
+        <span class="header-title">Capture</span>
+      </div>
+      <div class="header-right">
+        <button id="preview-btn" class="icon-btn" title="Toggle Preview">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <button id="settings-btn" class="icon-btn" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="input-container">
+      <textarea id="content" placeholder="What's on your mind? (Markdown supported)"></textarea>
+      <div id="markdown-preview" class="markdown-view hidden"></div>
+    </div>
+
+    <div class="source-row">
+      <div class="source-left">
+        <span class="source-label">Source:</span>
+        <span id="source-display" class="source-url">...</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="source-toggle" checked>
+        <span class="slider round"></span>
+      </label>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="note" placeholder="Add a note (context)...">
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-item">
+        <label>Group</label>
+        <div class="combo-box">
+          <select id="group-select"></select>
+          <input type="text" id="group-new" class="hidden" placeholder="New Group Name">
+        </div>
+      </div>
+      <div class="meta-item">
+        <label>Category</label>
+        <div class="combo-box">
+          <select id="category-select"></select>
+          <input type="text" id="category-new" class="hidden" placeholder="New Category">
+        </div>
+      </div>
+    </div>
+
+    <div class="session-section">
+      <label>Thread Context</label>
+      <select id="session-select">
+        <option value="new">⚡ Start New Thread</option>
+      </select>
+
+      <div id="thread-preview" class="thread-card hidden">
+        <div class="card-label">THREAD ANCHOR:</div>
+        <div id="preview-note" class="card-note"></div>
+        <div id="preview-content" class="card-content"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="save-btn">Capture</button>
+    </div>
+    <div id="status-msg"></div>
+  </div>
+
+
+  <div id="view-settings" class="app-container hidden">
+    <div class="header">
+      <button id="back-btn" class="icon-btn" title="Back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <span class="header-title">Settings</span>
+      <div style="width: 24px;"></div>
+    </div>
+
+    <div class="tabs-header">
+      <button id="tab-context" class="tab-btn active">Context</button>
+      <button id="tab-config" class="tab-btn">Config</button>
+    </div>
+
+    <div id="panel-context" class="tab-panel">
+      <div class="settings-filters">
+        <div class="filter-row">
+          <select id="filter-group"></select>
+          <button id="btn-del-group" class="icon-btn-danger" title="Delete selected Group">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        </div>
+        <div class="filter-row">
+          <select id="filter-cat"></select>
+          <button id="btn-del-cat" class="icon-btn-danger" title="Delete selected Category">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <button id="force-sync-btn" class="secondary-btn">↻ Sync from Firebase</button>
+      </div>
+
+      <div id="context-list" class="context-list-container"></div>
+
+      <div class="settings-section" style="margin-top: auto;">
+        <button id="clear-cache-btn" class="danger-btn">Reset Local Data</button>
+      </div>
+    </div>
+
+    <div id="panel-config" class="tab-panel hidden">
+      <div class="config-row">
+        <label>Auto-Sync on Open</label>
+        <label class="switch">
+          <input type="checkbox" id="config-autosync">
+          <span class="slider round"></span>
+        </label>
+      </div>
+
+      <div class="section-title" style="margin-top: 16px;">Firebase Config (Override)</div>
+      <div class="config-form">
+        <input type="text" id="cfg-apikey" placeholder="apiKey">
+        <input type="text" id="cfg-authdomain" placeholder="authDomain">
+        <input type="text" id="cfg-projectid" placeholder="projectId">
+        <button id="save-config-btn" class="secondary-btn" style="margin-top: 8px;">Save & Reload</button>
+        <div id="config-status" style="text-align:center; font-size:11px; margin-top:4px; color:#888;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="./dist/popup.js"></script>
+</body>
+
+</html>
