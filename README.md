@@ -86,7 +86,7 @@ service cloud.firestore {
 
 * Paste your keys and click Save & Reload.
 
-⌨️ Usage
+# ⌨️ Usage
 * Capture: Cmd/Ctrl+Shift+U (or click the icon).
 
 * New Line: Shift+Enter.
@@ -97,7 +97,7 @@ service cloud.firestore {
 
 * Sync: Go to Settings > Context > "Sync from Firebase".
 
-🏗️ Tech Stack
+# 🏗️ Tech Stack
 
 * Vite (Build Tool)
 
@@ -105,5 +105,7 @@ service cloud.firestore {
 
 * Vanilla JS (No heavy frameworks, pure DOM manipulation for speed)
 
-📄 License
+* Vibecoded don't expecxt funny stuff
+
+# 📄 License
 * MIT
