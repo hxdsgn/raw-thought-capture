@@ -250,12 +250,18 @@ async function renderContextList() {
     const header = document.createElement("div"); header.className = "ctx-header";
     
     const info = document.createElement("div"); info.className = "ctx-info";
-    const titleText = sess.note || sess.title || "(Untitled)";
+    
+    // --- FIX FOR UNDEFINED BUG ---
+    // We check 'content' first, fallback to 'title' (legacy), then empty string.
+    const mainContent = sess.content || sess.title || "";
+    // Title text: Note takes precedence, otherwise content, otherwise Untitled
+    const titleText = sess.note || mainContent || "(Untitled)";
+    
     info.innerHTML = `<div class="ctx-title">${titleText}</div><div class="ctx-meta">${new Date(sess.timestamp).toLocaleDateString()} • ${sess.group || '-'}</div>`;
 
     const actions = document.createElement("div"); actions.className = "ctx-actions";
     
-    // --- DONE BUTTON (The Fix) ---
+    // --- DONE BUTTON ---
     const doneBtn = document.createElement("button");
     doneBtn.className = "ctx-btn ctx-btn-done";
     doneBtn.textContent = "Done";
@@ -291,7 +297,8 @@ async function renderContextList() {
     header.appendChild(info); header.appendChild(actions);
 
     const body = document.createElement("div"); body.className = "ctx-body";
-    body.innerHTML = `<strong>Content:</strong><br>${sess.title}<br><br><em style="color:#888">ID: ${sess.id}</em>`;
+    // Fix: Show the actual content here too
+    body.innerHTML = `<strong>Content:</strong><br>${mainContent}<br><br><em style="color:#888">ID: ${sess.id}</em>`;
 
     header.onclick = () => { item.classList.toggle("open"); };
     item.appendChild(header); item.appendChild(body);
@@ -430,9 +437,14 @@ async function loadRecentSessions() {
   cachedSessions = d.recent_sessions || [];
   els.sessionSelect.innerHTML = '<option value="new">⚡ Start New Thread</option>';
   cachedSessions.forEach(s => {
-    const t = s.note ? s.note : s.title;
+    // --- FIX FOR UNDEFINED BUG IN DROPDOWN ---
+    // Handle both legacy 'title' and new 'content'
+    const mainContent = s.content || s.title || "";
+    // Note takes priority for the label
+    const t = s.note ? s.note : mainContent;
+    
     const opt = document.createElement("option"); opt.value = s.id;
-    opt.textContent = `⤷ ${t.substring(0,35)}...`;
+    opt.textContent = `⤷ ${t ? t.substring(0,35) : "Untitled"}...`;
     els.sessionSelect.appendChild(opt);
   });
 }
@@ -446,8 +458,13 @@ els.sessionSelect.addEventListener("change", () => {
   }
   const s = cachedSessions.find(x => x.id === id);
   if (!s) return;
-  if (s.note) { els.previewNote.textContent = s.note; els.previewContent.textContent = `"${s.title}"`; }
-  else { els.previewNote.textContent = s.title; els.previewContent.textContent = ""; }
+  
+  // --- FIX FOR UNDEFINED BUG IN PREVIEW ---
+  const mainContent = s.content || s.title || "";
+
+  if (s.note) { els.previewNote.textContent = s.note; els.previewContent.textContent = `"${mainContent}"`; }
+  else { els.previewNote.textContent = mainContent; els.previewContent.textContent = ""; }
+  
   els.threadPreview.classList.remove("hidden");
   if (s.group) { forceSetOption(els.groupSelect, s.group); els.groupSelect.style.borderColor="#3b82f6"; clearError(els.groupSelect); }
   if (s.category) { forceSetOption(els.catSelect, s.category); els.catSelect.style.borderColor="#3b82f6"; clearError(els.catSelect); }
@@ -492,7 +509,8 @@ els.saveBtn.onclick = async () => {
     }
     
     const payload = {
-      content, note: els.note.value.trim() || null, 
+      content, // Use 'content' property
+      note: els.note.value.trim() || null, 
       entryType: openingMode === "context_menu_modal" ? "User Highlight" : "User Idea",
       origin: openingMode, group: finalGroup, category: finalCat, source: sourceObj, 
       sessionId: finalSessionId, sessionRef: finalSessionRef, schemaVersion: 3
@@ -516,7 +534,7 @@ els.saveBtn.onclick = async () => {
       // PUSH THE REAL CLOUD ID to local cache, not the temp ID
       sessions.unshift({ 
         id: realCloudId, 
-        title: content, 
+        content: content, // FIX: Save as 'content' in local storage too
         note: els.note.value.trim() || null, 
         group: finalGroup, 
         category: finalCat, 
