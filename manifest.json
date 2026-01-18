@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Raw Thought Capture",
-  "version": "0.4",
+  "name": "Aha! - Raw Thought Capture",
+  "version": "1.0",
+  "description": "Capture and organize your thoughts quickly and efficiently.",
   "permissions": ["contextMenus", "scripting", "offscreen", "storage"],
   "host_permissions": [
     "<all_urls>"
