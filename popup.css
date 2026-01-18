@@ -126,7 +126,8 @@ body {
     flex-direction: column;
     flex-grow: 1;
     overflow: hidden;
-    gap: 12px;
+    gap: 10px;
+    height: 100%;
 }
 
 /* --- INPUTS & TEXTAREA --- */
@@ -370,6 +371,7 @@ input:checked+.slider:before {
     flex-direction: column;
     gap: 8px;
     padding-right: 4px;
+    min-height: 0;
 }
 
 .ctx-item {
@@ -478,9 +480,10 @@ input:checked+.slider:before {
     font-weight: 600;
     cursor: pointer;
     font-size: 14px;
+    transition: background 0.2s;
     flex-shrink: 0;
     margin-top: auto;
-    transition: background 0.2s;
+    margin-bottom: 2px;
 }
 
 #save-btn:hover {
@@ -504,6 +507,7 @@ input:checked+.slider:before {
     font-size: 13px;
     transition: all 0.2s;
     flex-shrink: 0;
+    margin-bottom: 2px;
 }
 
 .danger-btn:hover {
