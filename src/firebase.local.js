@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
+
 
 // 1. Config Logic
 const localConfig = JSON.parse(localStorage.getItem("firebase_custom_config") || "null");
@@ -41,7 +42,7 @@ async function ensureAuth() {
 
 async function saveEntry(payload) {
   if (!db) throw new Error("Cloud sync disabled.");
-  
+
   const finalPayload = {
     ...payload,
     status: "open",
@@ -55,9 +56,9 @@ async function fetchOpenContexts() {
   if (!db) return [];
   try {
     const q = query(
-      collection(db, "raw_entries"), 
-      where("status", "==", "open"),
-      where("sessionRef", "==", null)
+      collection(db, "raw_entries"),
+      where("status", "==", "open")
+      // Removed sessionRef filter to allow fetching replies for counters
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
@@ -77,4 +78,22 @@ async function markEntryDone(id) {
   await updateDoc(ref, { status: "done" });
 }
 
-export { auth, provider, signInWithPopup, ensureAuth, saveEntry, fetchOpenContexts, markEntryDone };
+async function markEntryActive(id) {
+  if (!db) return;
+  const ref = doc(db, "raw_entries", id);
+  await updateDoc(ref, { status: "open" });
+}
+
+async function updateEntry(id, fields) {
+  if (!db) return;
+  const ref = doc(db, "raw_entries", id);
+  await updateDoc(ref, fields);
+}
+
+async function deleteEntry(id) {
+  if (!db) return;
+  const ref = doc(db, "raw_entries", id);
+  await deleteDoc(ref);
+}
+
+export { auth, provider, signInWithPopup, ensureAuth, saveEntry, fetchOpenContexts, markEntryDone, markEntryActive, updateEntry, deleteEntry };

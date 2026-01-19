@@ -91,12 +91,97 @@ body {
     background-color: rgba(59, 130, 246, 0.1);
 }
 
-/* --- TABS --- */
+/* --- DETAIL VIEW & EDITING --- */
+.detail-input {
+    background: #111;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 8px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.chain-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.chain-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+}
+
+.chain-content {
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    color: #d4d4d4;
+}
+
+/* Badge for count */
+.badge-count {
+    background: var(--surface-hover);
+    color: var(--text-main);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+}
+
+/* Badge for Local/Cloud Tag - ENHANCED */
+.badge-tag {
+    font-size: 8px;
+    padding: 3px 6px;
+    border-radius: 12px;
+    margin-left: 6px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    cursor: default;
+}
+
+.badge-tag.local {
+    background-color: #3f3f46;
+    color: #e4e4e7;
+    border: 1px solid #52525b;
+}
+
+.ctx-item.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(0.8);
+}
+
+.ctx-item.disabled .ctx-actions {
+    display: none;
+}
+
+/* Tabs visual update for 3 tabs */
 .tabs-header {
     display: flex;
     border-bottom: 1px solid var(--border);
     margin-bottom: 12px;
-    gap: 16px;
+    justify-content: flex-start;
+    /* Changed from default */
     flex-shrink: 0;
 }
 
@@ -128,6 +213,9 @@ body {
     overflow: hidden;
     gap: 10px;
     height: 100%;
+    padding-bottom: 2px;
+    /* Prevent bottom element cutoff */
+    box-sizing: border-box;
 }
 
 /* --- INPUTS & TEXTAREA --- */
@@ -396,6 +484,8 @@ input:checked+.slider:before {
     gap: 8px;
     padding-right: 4px;
     min-height: 0;
+    flex-shrink: 1;
+    /* Ensure it yields space to the footer */
 }
 
 .ctx-item {
@@ -533,7 +623,8 @@ input:checked+.slider:before {
     font-size: 13px;
     transition: all 0.2s;
     flex-shrink: 0;
-    margin-bottom: 2px;
+    margin-bottom: 12px;
+    /* Increased buffer */
 }
 
 .danger-btn:hover {
@@ -585,9 +676,40 @@ input:checked+.slider:before {
     line-height: 1.3;
 }
 
+/* THREAD VISUALS (Detail View) */
+.detail-thread-container {
+    display: flex;
+    flex-direction: column;
+    padding-left: 10px;
+    border-left: 2px solid #333;
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+.chain-item {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+/* Horizontal connector line */
+.chain-item::before {
+    content: '';
+    position: absolute;
+    left: -13px;
+    top: 20px;
+    width: 12px;
+    height: 2px;
+    background-color: #333;
+}
+
 /* --- SCROLLBAR --- */
 ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -595,12 +717,13 @@ input:checked+.slider:before {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #444;
+    background: var(--border);
     border-radius: 3px;
+    border: 1px solid var(--surface);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--primary);
 }
 
 /* --- ANIMATIONS --- */
@@ -644,51 +767,611 @@ input:checked+.slider:before {
     }
 }
 
-/* --- MODERN SCROLLBAR (Theme Matched) --- */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-    /* For horizontal scrolling if needed */
+/* --- MANAGER MODAL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
 }
 
-::-webkit-scrollbar-track {
+.modal-content {
+    background: var(--bg);
+    width: 320px;
+    max-height: 480px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.modal-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.manager-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.manager-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.manager-item:hover {
+    border-color: #444;
+}
+
+.manager-label {
+    font-size: 12px;
+    color: #e5e5e5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+}
+
+.manager-del-btn {
     background: transparent;
-    /* Floating look */
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border);
-    /* Dark Grey (#404040) */
-    border-radius: 3px;
-    border: 1px solid var(--surface);
-    /* Adds a tiny padding effect */
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
-    /* Turns Blue on Hover */
-}
-
-/* --- MODERN SCROLLBAR (High Contrast) --- */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    /* Subtle dark track */
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: #525252;
-    /* Visible Grey */
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
     border-radius: 4px;
-    /* Pill shape */
-    border: 2px solid transparent;
-    /* Padding effect */
-    background-clip: content-box;
+    transition: all 0.2s;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background-color: #3b82f6;
+.manager-del-btn:hover {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+
+/* --- HEADER CONTROLS --- */
+.header-select {
+    background: transparent;
+    border: 1px solid #444;
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    height: 24px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.header-select:hover {
+    color: var(--text-main);
+    border-color: #666;
+}
+
+.header-select option {
+    background: var(--bg);
+    color: var(--text-main);
+}
+
+/* --- FORMAT MODES --- */
+textarea.format-code {
+    font-family: "Fira Code", "Consolas", monospace;
+    font-size: 12px;
+    white-space: pre;
+    /* Forces horizontal scroll, preserves format exactly */
+    overflow-x: auto;
+    color: #a5b3ce;
+    line-height: 1.4;
+}
+
+
+/* Glass Green Button */
+.btn-glass-green {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 100%;
+}
+
+.btn-glass-green:hover {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
+}
+
+.btn-glass-green:active {
+    transform: translateY(1px);
+}
+
+/* Streamlined Toggle Container */
+.toggle-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    position: relative;
+    cursor: pointer;
+}
+
+/* Tooltip for Toggle on Hover */
+.toggle-container:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    animation: fadeIn 0.2s forwards;
+    pointer-events: none;
+    margin-bottom: 6px;
+    z-index: 100;
+    border: 1px solid #444;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive Full Size Switch */
+.switch-full {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+}
+
+.switch-full input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch-full .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #262626;
+    /* Surface color */
+    transition: .3s;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.switch-full .slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    /* Matches button inner height approx */
+    width: 24px;
+    left: 4px;
+    bottom: 3px;
+    background-color: #a1a1a1;
+    /* Default thumb color */
+    transition: .3s;
+    border-radius: 4px;
+}
+
+.switch-full input:checked+.slider {
+    background-color: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.switch-full input:checked+.slider:before {
+    background-color: #4ade80;
+    transform: translateX(0);
+    left: calc(100% - 28px);
+    /* Dynamic Right Align */
+}
+
+/* Hover Effect */
+.switch-full:hover .slider {
+    border-color: #666;
+}
+
+.switch-full:hover input:checked+.slider {
+    border-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
+}
+
+/* Glass Danger Button */
+.btn-glass-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 100%;
+}
+
+.btn-glass-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.6);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
+}
+
+.btn-glass-danger:active {
+    transform: translateY(1px);
+}
+
+/* Glass Primary Button */
+.btn-glass-primary {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 100%;
+}
+
+.btn-glass-primary:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.15);
+}
+
+.btn-glass-primary:active {
+    transform: translateY(1px);
+}
+
+/* --- SEGMENTED CONTROL ("3-Way Switch") --- */
+.segmented-control {
+    display: flex;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.seg-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.seg-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.seg-btn.active {
+    background: var(--surface);
+    color: var(--primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    border: 1px solid #333;
+}
+
+/* --- COMPACT NESTED CARD VIEW --- */
+.timeline-root {
+    display: flex;
+    flex-direction: column;
+    padding-top: 4px;
+    gap: 8px;
+    /* Reduced gap */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Base Step Container */
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Group Level - The Main Card */
+.timeline-step.is-group {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    /* Slightly tighter radius */
+    padding: 8px 10px;
+    /* Reduced padding */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    /* Prevent spill */
+}
+
+/* Category Level */
+.timeline-step.is-category {
+    margin-left: 0;
+    margin-top: 4px;
+    padding: 0 0 0 8px;
+    /* Reduced indent */
+    border-left: 2px solid #333;
+}
+
+/* Item Level */
+.timeline-step.is-item {
+    margin-top: 4px;
+    width: 100%;
+}
+
+/* Headers */
+.timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+/* Group Title */
+.is-group>.timeline-header .timeline-title {
+    font-size: 13px;
+    /* Compact font */
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 2px;
+}
+
+/* Category Title */
+.is-category>.timeline-header .timeline-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #777;
+    text-transform: uppercase;
+}
+
+/* Content Container */
+.timeline-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    /* Tighter items */
+    width: 100%;
+}
+
+/* Item Card (The Content) */
+.timeline-card {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 8px;
+    /* Compact padding */
+    width: 100%;
+    box-sizing: border-box;
+    /* Fix overflow */
+    position: relative;
+}
+
+.timeline-card:hover {
+    border-color: #444;
+    background: #181818;
+}
+
+/* Horizontal Actions Refactor */
+.chain-actions {
+    display: flex;
+    flex-direction: row !important;
+    gap: 4px;
+    opacity: 0.4;
+    /* More subtle */
+    transition: opacity 0.2s;
+}
+
+.timeline-card:hover .chain-actions {
+    opacity: 1;
+}
+
+/* Hide Timeline Nodes */
+.timeline-node {
+    display: none;
+}
+
+/* Copy Buttons in Header */
+.timeline-copy-btn {
+    opacity: 0;
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.timeline-header:hover .timeline-copy-btn {
+    opacity: 1;
+}
+
+.timeline-copy-btn:hover {
+    color: var(--primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- CONFIG PANEL CORRECTIONS --- */
+.config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 12px;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+}
+
+.config-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Fix Inputs in Config */
+.config-form input[type="text"],
+.config-form select {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+    /* Critical for layout */
+}
+
+.config-form input:focus,
+.config-form select:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+/* Fix Buttons in Config */
+#btn-add-custom-source,
+#btn-del-custom-source {
+    height: 34px;
+    /* Match input height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.secondary-btn {
+    background: #222;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.secondary-btn:hover {
+    background: #333;
+    color: #fff;
+    border-color: #555;
+}
+
+/* Fix Config Scrolling */
+#panel-config {
+    overflow-y: auto;
+    padding-right: 4px;
+    /* Space for scrollbar */
+}
+
+/* --- COMPACT SOURCE MODE --- */
+.source-container {
+    margin-bottom: 4px !important;
+}
+
+.segmented-control {
+    background: #111;
+    border-radius: 6px;
+    padding: 2px;
+    display: flex;
+    gap: 2px;
+}
+
+.seg-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #666;
+    padding: 4px 0;
+    /* Reduced padding */
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.seg-btn.active {
+    background: #333;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Cramp the Note Input slightly */
+#note {
+    padding: 6px 8px;
+    font-size: 12px;
+    height: auto;
+    min-height: 28px;
+    margin-bottom: 4px;
 }

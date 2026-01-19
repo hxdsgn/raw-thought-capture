@@ -16,6 +16,28 @@
         <span class="header-title">Capture</span>
       </div>
       <div class="header-right">
+        <!-- STORAGE SWITCH -->
+        <select id="header-storage-select" class="header-select" title="Storage Mode">
+          <option value="firebase">☁️ Cloud</option>
+          <option value="local">💻 Local</option>
+        </select>
+
+        <!-- WRAP CODE BUTTON -->
+        <button id="code-block-btn" class="icon-btn" title="Wrap in Code Block">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+        </button>
+
+        <!-- FORMAT TOGGLE -->
+        <button id="format-btn" class="icon-btn" title="Toggle Code Format (Monospace/Wrap)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6" />
+            <path d="M14 19l3 3 3-3" />
+            <path d="M17 22V15" />
+          </svg>
+        </button>
         <button id="preview-btn" class="icon-btn" title="Toggle Preview">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -38,15 +60,17 @@
       <div id="markdown-preview" class="markdown-view hidden"></div>
     </div>
 
-    <div class="source-row">
-      <div class="source-left">
-        <span class="source-label">Source:</span>
-        <span id="source-display" class="source-url">...</span>
+    <div class="source-container" style="margin-bottom: 8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span class="source-label">Source Mode:</span>
+        <span id="source-preview"
+          style="font-size:10px; color:var(--text-muted); max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">...</span>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="source-toggle" checked>
-        <span class="slider round"></span>
-      </label>
+      <div class="segmented-control" id="source-mode-switch">
+        <button type="button" class="seg-btn active" data-value="custom">User</button>
+        <button type="button" class="seg-btn" data-value="root">Root</button>
+        <button type="button" class="seg-btn" data-value="full">Full</button>
+      </div>
     </div>
 
     <div class="input-group">
@@ -55,15 +79,23 @@
 
     <div class="meta-grid">
       <div class="meta-item">
-        <label>Group</label>
-        <div class="combo-box">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin-bottom:0;">Group</label>
+          <button id="btn-manage-groups" class="icon-btn" style="padding:2px; height:18px; width:18px;"
+            title="Manage Groups">⚙️</button>
+        </div>
+        <div class="combo-box" style="margin-top:4px;">
           <select id="group-select"></select>
           <input type="text" id="group-new" class="hidden" placeholder="New Group Name">
         </div>
       </div>
       <div class="meta-item">
-        <label>Category</label>
-        <div class="combo-box">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin-bottom:0;">Category</label>
+          <button id="btn-manage-cats" class="icon-btn" style="padding:2px; height:18px; width:18px;"
+            title="Manage Categories">⚙️</button>
+        </div>
+        <div class="combo-box" style="margin-top:4px;">
           <select id="category-select"></select>
           <input type="text" id="category-new" class="hidden" placeholder="New Category">
         </div>
@@ -71,8 +103,12 @@
     </div>
 
     <div class="session-section">
-      <label>Thread Context</label>
-      <select id="session-select">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="margin-bottom:0;">Thread Context</label>
+        <button id="btn-manage-threads" class="icon-btn" style="padding:2px; height:18px; width:18px;"
+          title="Manage Threads">⚙️</button>
+      </div>
+      <select id="session-select" style="margin-top:4px;">
         <option value="new">⚡ Start New Thread</option>
       </select>
 
@@ -102,9 +138,23 @@
     </div>
 
     <div class="tabs-header">
-      <button id="tab-context" class="tab-btn active">Context</button>
-      <button id="tab-config" class="tab-btn">Config</button>
+      <button id="tab-active" class="tab-btn active" data-target="panel-context">Active</button>
+      <button id="tab-done" class="tab-btn" data-target="panel-context">Done</button>
+      <button id="tab-trash" class="tab-btn" data-target="panel-context">Trash</button>
+      <div style="flex-grow:1"></div>
+      <button id="tab-config" class="tab-btn" data-target="panel-config">Config</button>
     </div>
+
+    <div class="filter-row" style="margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom:10px;">
+      <label style="color:var(--text-muted); font-size:11px; align-self:center;">Storage:</label>
+      <select id="storage-mode-select" style="padding:4px; width:auto;">
+        <option value="firebase">Firebase (Cloud)</option>
+        <option value="local">Local Only</option>
+      </select>
+      <button id="force-sync-btn" class="icon-btn" title="Sync from Firebase" style="margin-left:auto;">↻</button>
+    </div>
+
+
 
     <div id="panel-context" class="tab-panel">
       <div class="settings-filters">
@@ -129,7 +179,7 @@
       </div>
 
       <div style="margin-bottom: 8px;">
-        <button id="force-sync-btn" class="secondary-btn">↻ Sync from Firebase</button>
+        <!-- Sync moved to header -->
       </div>
 
       <div id="context-list" class="context-list-container"></div>
@@ -148,6 +198,21 @@
         </label>
       </div>
 
+      <div class="section-title" style="margin-top: 16px;">Source Settings</div>
+      <div class="config-form">
+        <div class="config-row">
+          <label style="font-size:11px; color:#aaa;">User Defined Sources logic:</label>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <select id="cfg-custom-source" style="flex:1;"></select>
+          <button id="btn-del-custom-source" class="icon-btn-danger" title="Delete Selected">🗑️</button>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="cfg-new-source" placeholder="New Label (e.g. Idea)" style="flex:1;">
+          <button id="btn-add-custom-source" class="secondary-btn" style="width:auto; padding:0 12px;">Add</button>
+        </div>
+      </div>
+
       <div class="section-title" style="margin-top: 16px;">Firebase Config (Override)</div>
       <div class="config-form">
         <input type="text" id="cfg-apikey" placeholder="apiKey">
@@ -158,6 +223,72 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- VIEW DETAIL (Moved here) -->
+  <!-- VIEW DETAIL (Moved here) -->
+  <div id="view-detail" class="app-container hidden">
+    <div class="header" style="gap: 8px;">
+      <button id="detail-back-btn" class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <span class="header-title" id="detail-title"
+        style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Thread Detail</span>
+      <div style="width:24px"></div>
+    </div>
+
+    <div id="detail-root-card" class="thread-card" style="margin-bottom: 12px; border-left-color: var(--success);">
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <h2 style="margin:0; font-size:14px; font-weight:800; color:#fff; letter-spacing:0.5px;">Chain of Thought</h2>
+        <button id="copy-chain-btn" class="icon-btn" title="Copy All Content" style="padding:2px;">📋</button>
+      </div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="thread-search" placeholder="Search..."
+          style="width: 100px; padding: 4px; font-size: 11px; border: none; border-bottom: 1px solid var(--border); background: transparent; color: var(--text-main); outline:none;">
+        <button id="thread-sort-btn" class="icon-btn" title="Toggle Sort Order" style="opacity:0.7;">⬇️</button>
+      </div>
+    </div>
+
+    <!-- Thread Actions (Fetch/Auto) -->
+    <div id="thread-actions-bar"
+      style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; display:none; gap: 10px;">
+      <button id="fetch-cloud-btn" class="btn-glass-green" style="flex:4;">Fetch Responses</button>
+      <div class="toggle-container" style="flex:1;" data-tooltip="Enable Auto-Fetch on Open">
+        <label class="switch-full">
+          <input type="checkbox" id="auto-fetch-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    <div id="detail-list" class="context-list-container" style="padding-bottom: 20px;">
+    </div>
+  </div>
+
+  <!-- MANAGER MODAL -->
+  <div id="manager-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" id="manager-title">Manage Items</span>
+        <button id="btn-close-manager" class="icon-btn">✕</button>
+      </div>
+      <div id="manager-list" class="manager-list"></div>
+    </div>
+  </div>
+
+  <!-- ERROR MODAL -->
+  <div id="error-modal" class="modal-overlay hidden" style="z-index: 9999;">
+    <div class="modal-content" style="border: 1px solid var(--danger); max-width: 300px;">
+      <h3 style="color: var(--danger); margin-top:0;">⚠️ Error</h3>
+      <p id="error-message"
+        style="color: #ddd; font-size: 13px; line-height: 1.5; margin: 12px 0; white-space: pre-wrap;"></p>
+      <button id="error-close-btn" class="secondary-btn"
+        style="border-color: var(--danger); color: var(--danger);">Dismiss</button>
+    </div>
   </div>
 
   <script type="module" src="./dist/popup.js"></script>
