@@ -1058,13 +1058,12 @@ function renderDirectoryTree(items, container) {
            <div class="timeline-node"></div>
            <span class="timeline-title">${grpName}</span>
        </div>
-       <button class="timeline-copy-btn" title="Copy Group">📋 Copy</button>
+       <button class="timeline-copy-btn" data-action="copy-group" data-title="${grpName}" title="Copy Group">📋 Copy</button>
     `;
 
     // Copy
-    grpHeader.querySelector("button").onclick = (e) => {
-      e.stopPropagation(); copyTreeContent(groups[grpName], grpName);
-    };
+    // Event is delegated, no manual onclick needed here since we use data attributes now
+    // logic moved to detailList listener
 
     grpStep.appendChild(grpHeader);
 
@@ -1085,12 +1084,10 @@ function renderDirectoryTree(items, container) {
                 <div class="timeline-node"></div>
                 <span class="timeline-title">${catName}</span>
             </div>
-            <button class="timeline-copy-btn" title="Copy Category">📋</button>
+            <button class="timeline-copy-btn" data-action="copy-cat" data-group="${grpName}" data-cat="${catName}" title="Copy Category">📋</button>
         `;
 
-      catHeader.querySelector("button").onclick = (e) => {
-        e.stopPropagation(); copyTreeContent({ [catName]: categories[catName] }, catName);
-      };
+      // Delegation handles click
 
       const catBody = document.createElement("div");
       catBody.className = "timeline-body";
@@ -1195,9 +1192,9 @@ function renderChainItem(item) {
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
             <span style="font-size:10px; color:#666;">${displayDate}</span>
             <div class="chain-actions">
-               <button class="icon-btn" onclick="copyChainItem('${item.id}')" title="Copy">📋</button>
-               <button class="icon-btn" onclick="toggleEdit('${item.id}')" title="Edit">✏️</button>
-               <button class="icon-btn-danger" onclick="deletePermanent('${item.id}')" title="Delete">🗑️</button>
+               <button class="icon-btn" data-action="copy" data-id="${item.id}" title="Copy">📋</button>
+               <button class="icon-btn" data-action="edit" data-id="${item.id}" title="Edit">✏️</button>
+               <button class="icon-btn-danger" data-action="trash" data-id="${item.id}" title="Move to Trash">🗑️</button>
             </div>
         </div>
         ${itemNote}
@@ -1225,6 +1222,36 @@ async function fetchThreadResponses(rootId) {
   const rootItem = sessions.find(s => s.id === rootId);
   if (rootItem) openDetailView(rootItem, true); // skipAutoFetch = true
 }
+
+// --- ACTION HELPERS ---
+window.copyChainItem = async (id) => {
+  const data = await chrome.storage.local.get("recent_sessions");
+  const item = data.recent_sessions?.find(s => s.id === id);
+  if (item && item.content) {
+    navigator.clipboard.writeText(item.content);
+    // Visual Feedback
+    const btn = document.querySelector(`#chain-${id} .icon-btn[data-action="copy"]`);
+    if (btn) {
+      const old = btn.textContent; btn.textContent = "✅";
+      setTimeout(() => btn.textContent = old, 1500);
+    }
+  }
+};
+
+window.trashChainItem = async (id) => {
+  // Soft Delete: Move to Trash
+  await updateStatus(id, 'trash');
+
+  // UI Refresh: Remove from DOM nicely
+  const el = document.getElementById(`chain-${id}`);
+  if (el) {
+    el.style.transition = "all 0.3s ease";
+    el.style.opacity = '0';
+    el.style.transform = "translateX(20px)";
+    setTimeout(() => el.remove(), 300);
+  }
+  // Also remove from local cache for logic consistency if needed, but updateStatus does it.
+};
 
 // Edit Mode: Switch to Main Capture View populated with item data
 window.toggleEdit = async (id) => {
@@ -1254,9 +1281,12 @@ window.toggleEdit = async (id) => {
   els.saveBtn.textContent = "Update";
 
   // Hide Detail View -> Show Main View
+  // Hide Detail View -> Show Main View
   els_ex.viewDetail.classList.add("hidden");
   els_ex.viewDetail.style.display = "none";
-  els.viewSettings.classList.remove("hidden"); // Ensure we aren't in settings either
+  els.viewSettings.classList.add("hidden"); // Ensure Settings is hidden
+  els.viewCapture.classList.remove("hidden"); // Show Capture View
+  els.previewBtn.classList.remove("active"); // Ensure Note Mode
 
   // Show Main Container
   document.querySelector('.app-container').classList.remove('hidden'); // Should be visible anyway
@@ -1289,6 +1319,64 @@ async function saveEdit(id) {
 }
 
 
+
+// --- EVENT DELEGATION (CSP FIX) ---
+if (els_ex.detailList) {
+  els_ex.detailList.addEventListener("click", (e) => {
+    // Traverse up to find button
+    const btn = e.target.closest("button");
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === "copy") { e.stopPropagation(); copyChainItem(id); }
+    else if (action === "edit") { e.stopPropagation(); toggleEdit(id); }
+    else if (action === "trash") { e.stopPropagation(); trashChainItem(id); }
+    else if (action === "copy-group") {
+      e.stopPropagation();
+      const title = btn.dataset.title;
+      // Re-construct data? Or just look it up. 
+      // We lack the data object here. 
+      // Better: We should store the data on the element or fetch from session.
+      // For simplicity, let's just grab the texts from DOM or re-fetch.
+      // Actually, we can just grab from `cachedSessions` by filter.
+      const groupName = title;
+      const grpItems = cachedSessions.filter(s => (s.sessionRef === appState.currentDetailId || s.id === appState.currentDetailId) && s.group === groupName);
+      // We need structure { Group: { Category: [Items] } } but copyTreeContent expects { Category: [Items] }?
+      // Let's check copyTreeContent usage. It expects dataObj.
+
+      // Actually, we can just hack it: "Not implemented in CSP mode yet" or fix it properly.
+      // Let's implement helper: getGroupData(grpName)
+      copyGroupData(appState.currentDetailId, groupName);
+    }
+    else if (action === "copy-cat") {
+      e.stopPropagation();
+      copyCategoryData(appState.currentDetailId, btn.dataset.group, btn.dataset.cat);
+    }
+  });
+}
+
+// Helper for Group/Cat Copy in CSP Mode
+async function copyGroupData(rootId, grpName) {
+  const sessions = await chrome.storage.local.get("recent_sessions").then(d => d.recent_sessions || []);
+  const items = sessions.filter(s => (s.sessionId === rootId || s.sessionRef === rootId || s.id === rootId) && s.group === grpName);
+
+  const structured = {};
+  items.forEach(i => {
+    const c = i.category || "General";
+    if (!structured[c]) structured[c] = [];
+    structured[c].push(i);
+  });
+  copyTreeContent(structured, grpName);
+}
+
+async function copyCategoryData(rootId, grpName, catName) {
+  const sessions = await chrome.storage.local.get("recent_sessions").then(d => d.recent_sessions || []);
+  const items = sessions.filter(s => (s.sessionId === rootId || s.sessionRef === rootId || s.id === rootId) && s.group === grpName && s.category === catName);
+
+  copyTreeContent({ [catName]: items }, catName);
+}
 
 els_ex.detailBack.addEventListener("click", () => {
   els_ex.viewDetail.classList.add("hidden");
