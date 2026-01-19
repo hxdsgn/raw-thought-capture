@@ -1739,7 +1739,11 @@ els.saveBtn.onclick = async () => {
       throw new Error("Note (Context) is required for new threads");
     }
 
-    if (!finalGroup || !finalCat) throw new Error("Missing required fields");
+    if (!finalGroup || !finalCat) {
+      if (!finalGroup) els.groupSelect.classList.add("input-error");
+      if (!finalCat) els.catSelect.classList.add("input-error");
+      throw new Error("Please select a Group and Category.");
+    }
 
     els.saveBtn.textContent = isEditing ? "Updating..." : "Saving...";
 
@@ -1931,8 +1935,12 @@ els.saveBtn.onclick = async () => {
 
     els.status.textContent = "Captured."; els.dot.style.backgroundColor = "#22c55e";
     setTimeout(() => window.close(), 800);
-  } catch (err) {
-    console.error(err); els.status.textContent = err.message; els.status.style.color = "#ef4444"; els.saveBtn.disabled = false; els.saveBtn.textContent = appState.editingId ? "Update" : "Capture";
+
+  } catch (e) {
+    console.error("Save Failed:", e);
+    showError(e.message || "Save Operation Failed");
+    els.saveBtn.disabled = false;
+    els.saveBtn.textContent = appState.editingId ? "Update" : "Capture";
   }
 };
 
