@@ -1,7 +1,6 @@
-import { auth, provider, signInWithPopup, saveEntry, ensureAuth, fetchOpenContexts, markEntryDone, markEntryActive, updateEntry, deleteEntry } from "./firebase.local.js";
+import { auth, provider, saveEntry, trySignIn, ensureAuth, fetchOpenContexts, markEntryDone, markEntryActive, updateEntry, deleteEntry } from "./firebase.local.js";
 
-// --- STATE MANAGEMENT ---
-// --- STATE MANAGEMENT ---
+
 let appState = {
   currentView: 'capture', // capture, settings, detail
   captureStorageMode: localStorage.getItem("storage_mode") || "firebase", // Main/Capture
@@ -17,11 +16,7 @@ let appState = {
   selectedCustomSource: localStorage.getItem("selected_custom_source") || "Idea"
 };
 
-// Getter for backward compatibility or explicit usage
-Object.defineProperty(appState, 'storageMode', {
-  get: function () { return this.captureStorageMode; }, // Default to Capture for generic accesses
-  set: function (v) { this.captureStorageMode = v; }
-});
+
 
 // --- DOM ELEMENTS ---
 const els = {
@@ -47,6 +42,7 @@ const els = {
 
   // Config Manager
   configAutosync: document.getElementById("config-autosync"),
+  cfgOAuthClientId: document.getElementById("cfg-oauth-client-id"),
   cfgApiKey: document.getElementById("cfg-apikey"),
   cfgAuthDomain: document.getElementById("cfg-authdomain"),
   cfgProjectId: document.getElementById("cfg-projectid"),
@@ -127,6 +123,11 @@ if (els_ex.errorCloseBtn) {
   });
 }
 
+function cls_status() {
+  if (els.status) els.status.textContent = "";
+  if (els.dot) els.dot.style.backgroundColor = "";
+}
+
 // --- 1. INITIALIZATION & CLEANUP ---
 
 async function init() {
@@ -135,8 +136,8 @@ async function init() {
     initSourceLogic(); // Initialize Source Switch & Settings
     await loadDropdowns();
 
-    // Set Storage Mode UI
-    // els_ex.storageSelect.value = appState.storageMode; // Handled by separate event listener setup now
+    // Set Storage Mode UI (Handled by listener)
+
 
     // Clean up old trash
     cleanupTrash();
@@ -200,7 +201,7 @@ async function init() {
       });
     }
 
-    updateSourceDisplay();
+    renderSourceMode();
   } catch (err) { console.error("Init Error:", err); }
 }
 
@@ -620,7 +621,6 @@ async function renderContextList() {
       els.contextList.appendChild(batchBar);
     }
 
-    // 3. Render Groups
     // 3. Render Groups
     Object.keys(groups).forEach(threadId => {
       const group = groups[threadId];
@@ -1443,13 +1443,15 @@ if (copyChainBtn) {
 // --- 5. SETTINGS: CONFIGURATION ---
 
 function loadConfigUI() {
-  els.configAutosync.checked = localStorage.getItem("autosync_enabled") === "true";
-  const localConfig = JSON.parse(localStorage.getItem("firebase_custom_config") || "null");
-  if (localConfig) {
-    els.cfgApiKey.value = localConfig.apiKey || "";
-    els.cfgAuthDomain.value = localConfig.authDomain || "";
-    els.cfgProjectId.value = localConfig.projectId || "";
-  }
+  const localConfig = JSON.parse(localStorage.getItem("firebase_custom_config") || "{}");
+  const oauthId = localStorage.getItem("oauth_client_id") || "";
+
+  if (els.configAutosync) els.configAutosync.checked = localStorage.getItem("autosync_enabled") === "true";
+
+  if (els.cfgOAuthClientId) els.cfgOAuthClientId.value = oauthId;
+  if (els.cfgApiKey) els.cfgApiKey.value = localConfig.apiKey || "";
+  if (els.cfgAuthDomain) els.cfgAuthDomain.value = localConfig.authDomain || "";
+  if (els.cfgProjectId) els.cfgProjectId.value = localConfig.projectId || "";
 }
 
 els.configAutosync.addEventListener("change", () => {
@@ -1457,12 +1459,19 @@ els.configAutosync.addEventListener("change", () => {
 });
 
 els.saveConfigBtn.addEventListener("click", () => {
-  const apiKey = els.cfgApiKey.value.trim();
-  const authDomain = els.cfgAuthDomain.value.trim();
-  const projectId = els.cfgProjectId.value.trim();
+  const newConfig = {
+    apiKey: els.cfgApiKey.value.trim(),
+    authDomain: els.cfgAuthDomain.value.trim(),
+    projectId: els.cfgProjectId.value.trim()
+  };
 
-  if (!apiKey || !authDomain || !projectId) {
-    if (confirm("Clear custom config and revert to default?")) {
+  // Save OAuth ID separately
+  const oauthId = els.cfgOAuthClientId ? els.cfgOAuthClientId.value.trim() : "";
+  localStorage.setItem("oauth_client_id", oauthId);
+
+  // Check if Firebase config fields are all empty
+  if (!newConfig.apiKey && !newConfig.authDomain && !newConfig.projectId) {
+    if (confirm("Clear custom Firebase config and revert to default?")) {
       localStorage.removeItem("firebase_custom_config");
       els.configStatus.textContent = "Reverted.";
       setTimeout(() => window.location.reload(), 1000);
@@ -1470,14 +1479,17 @@ els.saveConfigBtn.addEventListener("click", () => {
     return;
   }
 
-  const newConfig = {
-    apiKey, authDomain, projectId,
-    storageBucket: `${projectId}.appspot.com`,
-    messagingSenderId: "000000000",
+  // Create final object
+  const finalConfig = {
+    apiKey: newConfig.apiKey,
+    authDomain: newConfig.authDomain,
+    projectId: newConfig.projectId,
+    storageBucket: `${newConfig.projectId}.appspot.com`,
+    messagingSenderId: "000000000", // Optional for Auth/Firestore usually
     appId: "1:000000000:web:0000000000"
   };
 
-  localStorage.setItem("firebase_custom_config", JSON.stringify(newConfig));
+  localStorage.setItem("firebase_custom_config", JSON.stringify(finalConfig));
   els.configStatus.textContent = "Saved. Reloading...";
   setTimeout(() => window.location.reload(), 1000);
 });
@@ -1489,10 +1501,57 @@ els.saveConfigBtn.addEventListener("click", () => {
 function renderMarkdown(text) {
   if (!text) return "";
   let t = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  t = t.replace(/```([\s\S] *?)```/g, (m, c) => ` < pre > <code>${c.trim()}</code></pre > `);
+
+  // Code Blocks
+  t = t.replace(/```([\s\S]*?)```/g, (m, c) => `<pre><code>${c.trim()}</code></pre>`);
   t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 1. Explicit Markdown Images ![alt](url)
+  t = t.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width:100%; border-radius:6px; margin:4px 0;" loading="lazy" />');
+
+  // 2. YouTube Auto-Embed (Raw Links)
+  // Supports: watch?v=ID, youtu.be/ID, shorts/ID
+  // Use youtube-nocookie to avoid Error 153 (Extensions/Privacy)
+  t = t.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]+)(\S*)/g,
+    '<div class="video-container" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; margin:8px 0; border-radius:6px;">' +
+    '<iframe src="https://www.youtube-nocookie.com/embed/$1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%;"></iframe></div>');
+
+  // 3. Raw Video Files (.mp4, .webm)
+  t = t.replace(/(https?:\/\/\S+\.(?:mp4|webm)(\?\S*)?)/gi,
+    '<video controls src="$1" style="max-width:100%; border-radius:6px; margin:8px 0;"></video>');
+
+  // 4. Raw Image URLs (Auto-Embed)
+  // Matches URLs ending in image ext OR containing format=jpg/png (Twitter/X style)
+  // Exclude if already in a tag (simple check: space-bound or line-start) 
+  // We use a simplified approach: detecting raw https links that match image patterns.
+  t = t.replace(/(https?:\/\/\S+(?:png|jpg|jpeg|gif|webp|svg)(?:\?\S*)?|https?:\/\/\S+format=(?:jpg|png|webp)\S*)/gi, (match) => {
+    // Avoid double-replacing if it was already handled (e.g. inside an existing tag)
+    // This is a naive check. For robust markdown we'd use a parser.
+    // But since we process explicit tags first, we might be safe if we are careful.
+    // However, regex text replacement is tricky. 
+    // Let's assume the user pastes JUST the link or the link is distinct.
+    return `<img src="${match}" style="max-width:100%; border-radius:6px; margin:4px 0;" loading="lazy" />`;
+  });
+
+  // Basic Formatting
   t = t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  return t.split(/(<pre>[\s\S]*?<\/pre>)/g).map(p => p.startsWith('<pre>') ? p : p.replace(/\n/g, '<br>')).join('');
+  t = t.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+  // 5. Explicit Links [text](url)
+  t = t.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  // 6. Auto-Linkify remaining raw URLs (that weren't images/videos)
+  // We need to be careful not to match URLs inside src="..." attributes we just created.
+  // A simple hack: Process raw links first? No, we needed to identify images first.
+  // We can skip this or use a negative lookbehind if supported, or matching non-quote chars.
+  // For now, let's skip auto-linkifying to prevent breaking the <img> tags we just made.
+  // Or, simplistic: Only match URLs preceded by whitespace or start of line, avoiding quotes.
+  // t = t.replace(/(^|\s)(https?:\/\/[^\s<"]+)/g, '$1<a href="$2" target="_blank">$2</a>');
+
+  return t.split(/(<pre>[\s\S]*?<\/pre>|<div class="video-container"[\s\S]*?<\/div>|<video[\s\S]*?<\/video>|<img[\s\S]*?>)/g).map(p => {
+    if (p.startsWith('<pre>') || p.startsWith('<div') || p.startsWith('<video') || p.startsWith('<img')) return p;
+    return p.replace(/\n/g, '<br>');
+  }).join('');
 }
 
 els.previewBtn.addEventListener("click", () => {
@@ -1506,15 +1565,7 @@ els.previewBtn.addEventListener("click", () => {
 });
 
 // Source Toggle
-function updateSourceDisplay() {
-  if (!currentSourceUrl) { els.sourceDisplay.textContent = "No Source"; return; }
-  try {
-    const u = new URL(currentSourceUrl);
-    els.sourceDisplay.textContent = els.sourceToggle.checked ? currentSourceUrl : u.hostname;
-    els.sourceDisplay.title = currentSourceUrl;
-  } catch (e) { els.sourceDisplay.textContent = "Invalid URL"; }
-}
-// els.sourceToggle.addEventListener("change", updateSourceDisplay); // REMOVED (Refactored)
+
 
 // Helpers
 function clearError(el) { el.classList.remove("input-error"); el.style.borderColor = ""; }
@@ -1877,7 +1928,7 @@ els.saveBtn.onclick = async () => {
         if (!navigator.onLine) throw new Error("No Internet Connection (Offline).");
 
         // B. Auth Check
-        if (!auth.currentUser) await ensureAuth().catch(() => signInWithPopup(auth, provider));
+        if (!auth.currentUser) await trySignIn(); // Uses Chrome Identity or Popup Fallback
 
         // C. Save with Timeout (Start Race)
         const timeoutPromise = new Promise((_, reject) =>
